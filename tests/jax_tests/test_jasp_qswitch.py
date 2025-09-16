@@ -188,7 +188,7 @@ def test_jasp_qswitch_function_control():
                         assert r == case_val
 
 
-def test_jasp_qswitch_tree_list():
+def test_jasp_qswitch_list():
     from qrisp import QuantumFloat, qswitch, boolean_simulation, measure
 
     def case_function(i, operand):
@@ -235,7 +235,7 @@ def test_jasp_qswitch_tree_list():
             assert r == case_val
 
 
-def test_jasp_qswitch_tree_list_control():
+def test_jasp_qswitch_list_control():
     from qrisp import QuantumFloat, qswitch, control, boolean_simulation, measure
 
     def case_function(i, operand):
@@ -291,3 +291,109 @@ def test_jasp_qswitch_tree_list_control():
                     assert r == 0
                 else:
                     assert r == case_val
+
+
+def test_jasp_qswitch_function_operand_list():
+    from qrisp import QuantumFloat, qswitch, boolean_simulation, measure
+
+    # tree
+    @boolean_simulation
+    def main(num, case_size, case_val):
+        case_qf = QuantumFloat(case_size)
+        case_qf[:] = case_val
+        operand_qf = [QuantumFloat(case_size), QuantumFloat(case_size)]
+
+        def case_function(i, operand0, operand1):
+            operand0 += i
+            operand1 += i
+
+        qswitch(operand_qf, case_qf, case_function, "tree", num)
+
+        return measure(operand_qf[0]), measure(operand_qf[1])
+
+    for case_size in range(1, 6):
+        for num in range(1, 2**case_size+1):
+            for case_val in range(0, 2**case_size):
+                r0, r1 = main(num, case_size, case_val)
+                if num <= case_val:
+                    assert r0 == 0
+                    assert r1 == 0
+                else:
+                    assert r0 == case_val
+                    assert r1 == case_val
+
+    # sequential
+    @boolean_simulation
+    def main(num, case_size, case_val):
+        case_qf = QuantumFloat(case_size)
+        case_qf[:] = case_val
+        operand_qf = [QuantumFloat(case_size), QuantumFloat(case_size)]
+
+        def case_function(i, operand0, operand1):
+            operand0 += i
+            operand1 += i
+
+        qswitch(operand_qf, case_qf, case_function, "sequential", num)
+
+        return measure(operand_qf[0]), measure(operand_qf[1])
+
+    for case_size in range(1, 6):
+        for num in range(1, 2**case_size+1):
+            for case_val in range(0, 2**case_size):
+                r0, r1 = main(num, case_size, case_val)
+                if num <= case_val:
+                    assert r0 == 0
+                    assert r1 == 0
+                else:
+                    assert r0 == case_val
+                    assert r1 == case_val
+
+def test_jasp_qswitch_list_operand_list():
+    from qrisp import QuantumFloat, qswitch, boolean_simulation, measure
+
+    def case_function(i, operand0, operand1):
+        operand0 += i
+        operand1 += i
+
+    case_function_list = [(lambda arg0, arg1, i=i: case_function(i, arg0, arg1)) for i in range(3**2)]
+
+    # tree
+    @boolean_simulation
+    def main(num, case_size, case_val):
+        case_qf = QuantumFloat(case_size)
+        case_qf[:] = case_val
+        operand_qf = [QuantumFloat(case_size), QuantumFloat(case_size)]
+
+        qswitch(operand_qf, case_qf, case_function_list, "tree", num)
+
+        return measure(operand_qf[0]), measure(operand_qf[1])
+
+    for case_size in range(1, 3):
+        for num in range(1, 2**case_size+1):
+            for case_val in range(2**case_size//2, 2**case_size):
+                r0, r1 = main(num, case_size, case_val)
+                if num <= case_val:
+                    assert r0 == 0
+                    assert r1 == 0
+                else:
+                    assert r0 == case_val
+                    assert r1 == case_val
+
+    case_function_list = [(lambda arg0, arg1, i=i: case_function(i, arg0, arg1)) for i in range(2**2)]
+
+    # sequential
+    @boolean_simulation
+    def main(case_size, case_val):
+        case_qf = QuantumFloat(case_size)
+        case_qf[:] = case_val
+        operand_qf = [QuantumFloat(case_size), QuantumFloat(case_size)]
+
+        qswitch(operand_qf, case_qf, case_function_list, "sequential")
+
+        return measure(operand_qf[0]), measure(operand_qf[1])
+
+    for case_size in [2]:
+        for case_val in range(2**case_size//2, 2**case_size):
+            r0, r1 = main(case_size, case_val)
+            assert r0 == case_val
+            assert r1 == case_val

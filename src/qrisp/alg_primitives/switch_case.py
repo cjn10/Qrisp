@@ -40,9 +40,9 @@ def qswitch(operand, case, case_function, method="auto", case_amount=None, inv=F
 
     Parameters
     ----------
-    operand : :ref:`QuantumVariable`
-        The argument on which the case function operates.
-    case : :ref:`QuantumFloat`
+    operand : QuantumVariable or list[QuantumVariable]
+        The quantum variable(s) to which the selected case function is applied. The case function must have a compatible signature.
+    case : QuantumFloat
         The index specifying which case should be executed.
     case_function : list[callable] or callable
         A list of functions, performing some in-place operation on ``operand``, or
@@ -132,6 +132,10 @@ def qswitch(operand, case, case_function, method="auto", case_amount=None, inv=F
         if inv:
             case_function = invert_inpl_function(case_function)
 
+        if isinstance(operand, list):
+            _case_function = case_function
+            def case_function(i, x): return _case_function(i, *x)
+
     elif isinstance(case_function, list):
         if case_amount == None:
             case_amount = len(case_function)
@@ -139,10 +143,13 @@ def qswitch(operand, case, case_function, method="auto", case_amount=None, inv=F
             if method == "sequential":
                 raise TypeError(
                     "Argument 'case_amount' must be 'None' when using the 'sequential' method and a list as a 'case_function'"
-                    )
+                )
 
         if inv:
             case_function = [invert_inpl_function(func) for func in case_function]
+
+        if isinstance(operand, list):
+            case_function = [(lambda x, func=func: func(*x)) for func in case_function]
 
         xrange = range
         if method == "auto":
